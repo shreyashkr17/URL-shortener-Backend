@@ -1,0 +1,1 @@
+{"name":"Local: 1","url":"/home/shreyashkumar/projects/url-shortener/backend/1.cpp","tests":[{"id":1728398574650,"input":"Count\n_temporary\n2day\nproduct list\nTwelve","output":"Valid\nValid\nInvalid\nInvalid\nInvalid"}],"interactive":false,"memoryLimit":1024,"timeLimit":3000,"srcPath":"/home/shreyashkumar/projects/url-shortener/backend/1.cpp","group":"local","local":true}
