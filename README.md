@@ -99,10 +99,62 @@ This URL shortener backend is designed with scalability and performance in mind.
 
 ```mermaid
 graph TD
-    A[Client] --> B[Nginx Load Balancer]
-    B --> C[Node.js Cluster]
-    C --> D[Express Application]
-    D --> E[Rate Limiter]
-    D --> F[URL Service]
-    F --> G[Cache Layer - Redis]
-    F --> H[Database - PostgreSQL]
+    Client[Client]
+    LoadBalancer[Load Balancer]
+    subgraph "URL Shortener Application"
+        WebServer[Web Server]
+        App[Express Application]
+        UUIDMiddleware[UUID Middleware]
+        RateLimiterMiddleware[Rate Limiter Middleware]
+        Controller[URL Controller]
+        Services[Services]
+        Model[URL Model]
+    end
+    Redis[(Redis Cache)]
+    PostgreSQL[(PostgreSQL Database)]
+    ExternalAPI[External IP API]
+
+    Client -->|HTTP Request| LoadBalancer
+    LoadBalancer -->|Distribute Requests| WebServer
+    WebServer -->|Process Request| App
+    App -->|Generate/Check UUID| UUIDMiddleware
+    UUIDMiddleware -->|Set UUID Cookie| Client
+    App -->|Check Rate Limits| RateLimiterMiddleware
+    RateLimiterMiddleware -->|Check/Update Limits| Redis
+    App -->|Route Request| Controller
+    Controller -->|Use| Services
+    Services -->|Query/Update| Model
+    Model -->|Read/Write| PostgreSQL
+    Services -->|Cache Operations| Redis
+    Services -->|Get Client IP| ExternalAPI
+
+    subgraph "Service Layer"
+        Services -->|URL Service| URLService[URL Service]
+        Services -->|Cache Service| CacheService[Cache Service]
+        Services -->|IP Service| IPService[IP Service]
+        Services -->|UUID Service| UUIDService[UUID Service]
+    end
+
+    subgraph "Server Scaling"
+        ProcessManager[Process Manager]
+        Worker1[Worker 1]
+        Worker2[Worker 2]
+        WorkerN[Worker N]
+        ProcessManager -->|Spawn| Worker1
+        ProcessManager -->|Spawn| Worker2
+        ProcessManager -->|Spawn| WorkerN
+    end
+
+    LoadBalancer -.->|Distribute Requests| Worker1
+    LoadBalancer -.->|Distribute Requests| Worker2
+    LoadBalancer -.->|Distribute Requests| WorkerN
+
+    subgraph "Rate Limiting"
+        GlobalLimit[Global Rate Limit]
+        UserLimit[User-Level Rate Limit]
+        RateLimiterMiddleware -->|Check| GlobalLimit
+        RateLimiterMiddleware -->|Check| UserLimit
+        GlobalLimit -->|Update| Redis
+        UserLimit -->|Update| Redis
+    end
+```
