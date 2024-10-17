@@ -10,11 +10,12 @@ const app = express();
 app.use(express.json());
 
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' ? 'http://localhost:5173' : 'http://localhost:5173',
+  origin: ['https://www.shortlycut.xyz', 'https://shortlycut.xyz'],
   optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 
 app.use((req:Request, res: Response, next: NextFunction) => {
@@ -51,6 +52,9 @@ const redirectUrlHandler = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
+app.get('/', (req, res) => {
+  res.send('Hello World');
+});
 app.post('/shorten', rateLimiterMiddleware, createshort_urlHandler);
 app.get('/:id', redirectUrlHandler);
 app.get('/metrics', async(req:Request, res: Response) => {

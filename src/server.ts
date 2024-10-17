@@ -10,7 +10,7 @@ import redisClient from "./config/redis";
 dotenv.config();
 
 const numCPUs = os.cpus().length;
-const BASE_PORT = parseInt(process.env.BASE_PORT || '5000');
+const BASE_PORT = parseInt(process.env.BASE_PORT || '5050');
 // const METRICS_PORT = parseInt(process.env.METRICS_PORT || '9090');
 
 async function startServer(port: number) {

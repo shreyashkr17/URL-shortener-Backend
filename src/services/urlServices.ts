@@ -44,7 +44,7 @@ export class UrlService {
 
     // If not found, create a new short URL
     const id = uid.randomUUID();
-    const short_url = `http://localhost:5000/${id}`;
+    const short_url = `https://njs.shortlycut.xyz/${id}`;
     const url: Url = {
       id,
       original_url,
