@@ -165,7 +165,7 @@ app.post("/auth/login", loginAuthHandler);
 app.post('/auth/logout', authMiddlewareHandler, logoutAuthHandler);
 app.get('/auth/profile', authMiddlewareHandler, getProfileAuthHandler);
 
-app.post("/shorten", optionAuthMiddleware, rateLimiterMiddleware, createShortUrlHandler);
+app.post("/shorten", authMiddlewareHandler, rateLimiterMiddleware, createShortUrlHandler);
 app.get("/:id", redirectUrlHandler);
 
 app.get("/metrics", async (req: Request, res: Response) => {
