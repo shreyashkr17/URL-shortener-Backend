@@ -8,8 +8,9 @@ export class UrlController {
     try {
       const { original_url } = req.body;
       const ip = await IpService.getClientIp();
-      console.log("Type of ip from getClient(): ",typeof ip)
-      const url = await UrlService.generateshort_url(original_url, ip);
+      console.log("Type of ip from getClient(): ",typeof ip);
+      const userId = req.user?.id;
+      const url = await UrlService.generateshort_url(original_url, ip, userId);
 
       res.json({ url });
     } catch (error) {

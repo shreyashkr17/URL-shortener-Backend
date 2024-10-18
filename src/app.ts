@@ -9,6 +9,8 @@ import {
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { UuidService } from "./services/uuidServices";
+import { AuthController } from "./controllers/authController";
+import { AuthMiddleware } from "./middleware/authMiddleware";
 
 const app = express();
 
@@ -83,11 +85,87 @@ const redirectUrlHandler = async (
   }
 };
 
+const registerAuthHandler = async (
+  req:Request,
+  res:Response,
+  next:NextFunction
+) => {
+  try {
+    await AuthController.register(req,res);
+  } catch (error) {
+    next(error);
+  }
+}
+const loginAuthHandler = async (
+  req:Request,
+  res:Response,
+  next:NextFunction
+) => {
+  try {
+    await AuthController.login(req, res);
+  } catch (error) {
+    next(error);
+  }
+}
+
+const authMiddlewareHandler = async (
+  req:Request,
+  res:Response,
+  next:NextFunction
+) => {
+  try {
+    await AuthMiddleware.authenticate(req,res,next);
+  } catch (error) {
+    next(error);
+  }
+}
+
+const logoutAuthHandler = async (
+  req:Request,
+  res:Response,
+  next:NextFunction
+) => {
+  try {
+    await AuthController.logout(req,res);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getProfileAuthHandler = async (
+  req:Request,
+  res:Response,
+  next:NextFunction
+) => {
+  try {
+    await AuthController.getProfile(req,res);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const optionAuthMiddleware = async (
+  req:Request,
+  res:Response,
+  next:NextFunction
+) => {
+  try {
+    await AuthMiddleware.optionalAuth(req,res,next);
+  } catch (error) {
+    next(error);
+  }
+}
+
 app.get("/", (req, res) => {
   res.send("Hello World");
 });
 
-app.post("/shorten", rateLimiterMiddleware, createShortUrlHandler);
+app.post("/auth/register", registerAuthHandler);
+app.post("/auth/login", loginAuthHandler);
+app.post('/auth/logout', authMiddlewareHandler, logoutAuthHandler);
+app.get('/auth/profile', authMiddlewareHandler, getProfileAuthHandler);
+
+app.post("/shorten", optionAuthMiddleware, rateLimiterMiddleware, createShortUrlHandler);
 app.get("/:id", redirectUrlHandler);
 
 app.get("/metrics", async (req: Request, res: Response) => {
