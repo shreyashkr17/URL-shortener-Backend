@@ -11,6 +11,7 @@ import cookieParser from "cookie-parser";
 import { UuidService } from "./services/uuidServices";
 import { AuthController } from "./controllers/authController";
 import { AuthMiddleware } from "./middleware/authMiddleware";
+import { ApiTokenMiddleware } from "./middleware/apiTokenMiddleware";
 
 const app = express();
 
@@ -144,13 +145,49 @@ const getProfileAuthHandler = async (
   }
 };
 
-const optionAuthMiddleware = async (
+const getgenerateAPIHandler = async(
   req:Request,
   res:Response,
   next:NextFunction
 ) => {
   try {
-    await AuthMiddleware.optionalAuth(req,res,next);
+    await AuthController.generateAPIToken(req,res);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const generateListAPIHandler = async (
+  req:Request,
+  res:Response,
+  next: NextFunction
+) => {
+  try {
+    await AuthController.listApiTokens(req,res);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteAPITokenHandler = async (
+  req:Request,
+  res:Response,
+  next: NextFunction
+) => {
+  try {
+    await AuthController.revokeApiToken(req,res);
+  } catch (error) {
+    next(error);
+  }
+}
+
+const apiMiddlewareHandler = async (
+  req:Request,
+  res:Response,
+  next: NextFunction
+) => {
+  try {
+    await ApiTokenMiddleware.authenticate(req,res,next);
   } catch (error) {
     next(error);
   }
@@ -165,7 +202,11 @@ app.post("/auth/login", loginAuthHandler);
 app.post('/auth/logout', authMiddlewareHandler, logoutAuthHandler);
 app.get('/auth/profile', authMiddlewareHandler, getProfileAuthHandler);
 
-app.post("/shorten", authMiddlewareHandler, rateLimiterMiddleware, createShortUrlHandler);
+app.post('/auth/api_token', authMiddlewareHandler, getgenerateAPIHandler);
+app.get('/auth/list-tokens', authMiddlewareHandler, generateListAPIHandler);
+app.delete('/auth/api_token/:token', authMiddlewareHandler, deleteAPITokenHandler);
+
+app.post("/shorten", apiMiddlewareHandler, rateLimiterMiddleware, createShortUrlHandler);
 app.get("/:id", redirectUrlHandler);
 
 app.get("/metrics", async (req: Request, res: Response) => {

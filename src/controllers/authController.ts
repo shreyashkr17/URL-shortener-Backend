@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { AuthServices } from "../services/authServices";
 import { UserModel } from "../models/userModel";
+import { error } from "console";
+import { ApiTokenModel } from "../models/apiTokenModel";
 
 export class AuthController {
   static async register(req: Request, res: Response) {
@@ -76,6 +78,52 @@ export class AuthController {
       const urls = await UserModel.getUrlsByUserId(userId);
       res.json({ urls });
     } catch (error:any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+
+
+
+
+  // API Token
+  static async generateAPIToken(req:Request, res:Response) {
+    try {
+      const userId = req.user?.id;
+      if(!userId){
+        return res.status(401).json({error: 'Not authenticated'});
+      } 
+
+      const apiToken = await ApiTokenModel.create(userId);
+      res.json({apiToken: apiToken.token});
+    } catch (error:any) {
+      res.status(500).json({error: error.message})
+    }
+  }
+
+  static async listApiTokens(req: Request, res: Response) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const tokens = await ApiTokenModel.findByUserId(userId);
+      res.json({ tokens });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async revokeApiToken(req: Request, res: Response) {
+    try {
+      const userId = req.user?.id;
+      const { tokenId } = req.params;
+      if (!userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      await ApiTokenModel.deleteToken(tokenId);
+      res.json({ message: "Token revoked successfully" });
+    } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   }
