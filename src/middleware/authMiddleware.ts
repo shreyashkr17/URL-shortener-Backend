@@ -29,7 +29,7 @@ declare module "express-serve-static-core" {
 export class AuthMiddleware {
   static async authenticate(req: Request, res: Response, next: NextFunction) {
     try {
-      const token = req.cookies.auth_token;
+      const token = req.headers["authorization"];
 
       if (!token) {
         return res.status(401).json({ error: "Authentication Required" });

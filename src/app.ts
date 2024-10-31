@@ -19,7 +19,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 const corsOptions = {
-  origin: ["https://www.shortlycut.xyz", "https://shortlycut.xyz"],
+  origin: ["https://www.shortlycut.xyz", "https://shortlycut.xyz", "http://localhost:5173", "*"],
   optionsSuccessStatus: 200,
   credentials: true, // Add this line to allow cookies to be sent with CORS requests
 };

@@ -51,7 +51,15 @@ export class ApiTokenModel {
   }
 
   static async deleteToken(id: string): Promise<void> {
-    const query = "DELETE FROM api_tokens WHERE id = $1";
-    await pool.query(query, [id]);
+    try {
+        const query = "DELETE FROM api_tokens WHERE id = $1";
+        const result = await pool.query(query, [id]);
+        // console.log(`Delete result for token ID ${id}:`, result);
+    } catch (error) {
+        console.error("Error deleting token:", error);
+        throw error;  // Rethrow the error to be handled by the calling function
+    }
   }
+
+  
 }
