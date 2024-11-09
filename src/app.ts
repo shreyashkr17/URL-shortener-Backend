@@ -206,7 +206,7 @@ const apiMiddlewareHandler = async (
 }
 
 app.get("/", (req, res) => {
-  res.send("Hello World");
+  res.sendFile("index.html", { root: __dirname });
 });
 
 app.post("/auth/register", registerAuthHandler);
