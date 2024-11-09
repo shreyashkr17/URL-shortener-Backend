@@ -74,6 +74,18 @@ const createShortUrlHandler = async (
   }
 };
 
+const createBatchShortURLsHandler = async (
+  req:Request, 
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    await UrlController.shortenBatchURLs(req, res);
+  } catch (error) {
+    next(error);
+  }
+}
+
 const redirectUrlHandler = async (
   req: Request,
   res: Response,
@@ -207,6 +219,7 @@ app.get('/auth/list-tokens', authMiddlewareHandler, generateListAPIHandler);
 app.delete('/auth/api_token/:token', authMiddlewareHandler, deleteAPITokenHandler);
 
 app.post("/shorten", apiMiddlewareHandler, rateLimiterMiddleware, createShortUrlHandler);
+app.post("/shorten/batch", apiMiddlewareHandler, rateLimiterMiddleware, createBatchShortURLsHandler);
 app.get("/:id", redirectUrlHandler);
 
 app.get("/metrics", async (req: Request, res: Response) => {

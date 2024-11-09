@@ -118,6 +118,7 @@ flowchart TD
             AuthController[Authentication Controller]
             ProfileController[Profile Controller]
             ApiTokenController[API Token Controller]
+            BatchURLController[Batch URL Controller]
         end
         
         subgraph "Service Layer"
@@ -128,6 +129,7 @@ flowchart TD
             IPService[IP Service]
             UUIDService[UUID Service]
             ApiTokenService[API Token Service]
+            BatchURLService[Batch URL Service]
         end
         
         subgraph "Model Layer"
@@ -158,14 +160,17 @@ flowchart TD
     App -->|Route Request| AuthController
     App -->|Route Request| ProfileController
     App -->|Route Request| ApiTokenController
+    App -->|Route Request for Batch| BatchURLController
     
     %% Service and Model flow
     URLController -->|Use| URLService
+    BatchURLController -->|Use| BatchURLService
     AuthController -->|Use| AuthService
     ProfileController -->|Use| ProfileService
     ApiTokenController -->|Use| ApiTokenService
     
     URLService -->|Query/Update| UrlModel
+    BatchURLService -->|Query/Update Multiple| UrlModel
     AuthService -->|Query/Update| UserModel
     ProfileService -->|Query/Update| UserModel
     ApiTokenService -->|Query/Update| ApiTokenModel
@@ -175,6 +180,7 @@ flowchart TD
     ApiTokenModel -->|Read/Write| PostgreSQL
     CacheService -->|Read/Write| Redis
     URLService -->|Cache Operations| CacheService
+    BatchURLService -->|Cache Operations for Batch| CacheService
     IPService -->|Get Client IP| ExternalAPI
     
     subgraph "User Management Layer"
