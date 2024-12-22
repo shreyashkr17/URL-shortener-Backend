@@ -220,6 +220,7 @@ app.delete('/auth/api_token/:token', authMiddlewareHandler, deleteAPITokenHandle
 
 app.post("/shorten", apiMiddlewareHandler, rateLimiterMiddleware, createShortUrlHandler);
 app.post("/shorten/batch", apiMiddlewareHandler, rateLimiterMiddleware, createBatchShortURLsHandler);
+app.post("/ext/shorten/batch",  rateLimiterMiddleware, createBatchShortURLsHandler);
 app.get("/:id", redirectUrlHandler);
 
 app.get("/metrics", async (req: Request, res: Response) => {
