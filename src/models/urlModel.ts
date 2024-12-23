@@ -6,18 +6,23 @@ export interface Url {
   short_url: string;
   created_at: Date;
   ip_addresses: string[];
+  user_id?: string;
 }
 
 export class UrlModel {
   static async create(url: Url): Promise<Url> {
-    const query =
-      "INSERT INTO urls (id, original_url, short_url, created_at, ip_addresses) VALUES ($1, $2, $3, $4, $5) RETURNING *";
+    const query = `
+      INSERT INTO urls (id, original_url, short_url, created_at, ip_addresses, user_id)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+    `;
     const values = [
       url.id,
       url.original_url,
       url.short_url,
       url.created_at,
       url.ip_addresses,
+      url.user_id
     ];
     const result = await pool.query(query, values);
     return result.rows[0];
@@ -43,6 +48,12 @@ export class UrlModel {
   ): Promise<Url | null> {
     const query = `UPDATE urls SET ip_addresses = array_append(ip_addresses, $1) WHERE id = $2 RETURNING *`;
     const result = await pool.query(query, [ipAddress, id]);
+    return result.rows[0] || null;
+  }
+
+  static async findByUserAndOriginalUrl(userId: string, original_url: string): Promise<Url | null> {
+    const query = "SELECT * FROM urls WHERE user_id = $1 AND original_url = $2";
+    const result = await pool.query(query, [userId, original_url]);
     return result.rows[0] || null;
   }
 }

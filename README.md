@@ -100,7 +100,7 @@ This URL shortener backend is designed with scalability and performance in mind.
 ```mermaid
 flowchart TD
     Client[Client]
-    LoadBalancer[Load Balancer]
+    LoadBalancer[Nginx Load Balancer]
     
     subgraph "URL Shortener Application"
         WebServer[Web Server]
@@ -110,12 +110,15 @@ flowchart TD
             UUIDMiddleware[UUID Middleware]
             RateLimiterMiddleware[Rate Limiter Middleware]
             AuthMiddleware[Authentication Middleware]
+            ApiTokenMiddleware[API Token Middleware]
         end
         
         subgraph "Controller Layer"
             URLController[URL Controller]
             AuthController[Authentication Controller]
             ProfileController[Profile Controller]
+            ApiTokenController[API Token Controller]
+            BatchURLController[Batch URL Controller]
         end
         
         subgraph "Service Layer"
@@ -125,16 +128,22 @@ flowchart TD
             CacheService[Cache Service]
             IPService[IP Service]
             UUIDService[UUID Service]
+            ApiTokenService[API Token Service]
+            BatchURLService[Batch URL Service]
         end
         
-        Model[Database Models]
+        subgraph "Model Layer"
+            UrlModel[URL Model]
+            UserModel[User Model]
+            ApiTokenModel[API Token Model]
+        end
     end
     
     Redis[(Redis Cache)]
     PostgreSQL[(PostgreSQL Database)]
     ExternalAPI[External IP API]
     
-    Client -->|HTTP Request| LoadBalancer
+    Client -->|HTTPS Request| LoadBalancer
     LoadBalancer -->|Distribute Requests| WebServer
     WebServer -->|Process Request| App
     
@@ -143,45 +152,59 @@ flowchart TD
     App -->|Generate/Check UUID| UUIDMiddleware
     UUIDMiddleware -->|Set UUID Cookie| Client
     App -->|Check Rate Limits| RateLimiterMiddleware
+    App -->|Validate API Token| ApiTokenMiddleware
     RateLimiterMiddleware -->|Check/Update Limits| Redis
     
     %% Controller flow
     App -->|Route Request| URLController
     App -->|Route Request| AuthController
     App -->|Route Request| ProfileController
+    App -->|Route Request| ApiTokenController
+    App -->|Route Request for Batch| BatchURLController
     
     %% Service and Model flow
     URLController -->|Use| URLService
+    BatchURLController -->|Use| BatchURLService
     AuthController -->|Use| AuthService
     ProfileController -->|Use| ProfileService
+    ApiTokenController -->|Use| ApiTokenService
     
-    URLService -->|Query/Update| Model
-    AuthService -->|Query/Update| Model
-    ProfileService -->|Query/Update| Model
+    URLService -->|Query/Update| UrlModel
+    BatchURLService -->|Query/Update Multiple| UrlModel
+    AuthService -->|Query/Update| UserModel
+    ProfileService -->|Query/Update| UserModel
+    ApiTokenService -->|Query/Update| ApiTokenModel
     
-    Model -->|Read/Write| PostgreSQL
+    UrlModel -->|Read/Write| PostgreSQL
+    UserModel -->|Read/Write| PostgreSQL
+    ApiTokenModel -->|Read/Write| PostgreSQL
     CacheService -->|Read/Write| Redis
-    URLService -->|Cache Operations| Redis
+    URLService -->|Cache Operations| CacheService
+    BatchURLService -->|Cache Operations for Batch| CacheService
     IPService -->|Get Client IP| ExternalAPI
     
     subgraph "User Management Layer"
-        AuthService -->|Authenticate User| UserModel[User Model]
+        AuthService -->|Authenticate User| UserModel
         ProfileService -->|Fetch/Update Profile| UserModel
+        ApiTokenService -->|Generate/Validate Tokens| ApiTokenModel
     end
     
     subgraph "Server Scaling"
-        ProcessManager[Process Manager]
-        Worker1[Worker 1]
-        Worker2[Worker 2]
-        WorkerN[Worker N]
+        ProcessManager[PM2 Process Manager]
+        Worker1[Worker 1 :5050]
+        Worker2[Worker 2 :5051]
+        Worker3[Worker 3 :5052]
+        Worker4[Worker 4 :5053]
         ProcessManager -->|Spawn| Worker1
         ProcessManager -->|Spawn| Worker2
-        ProcessManager -->|Spawn| WorkerN
+        ProcessManager -->|Spawn| Worker3
+        ProcessManager -->|Spawn| Worker4
     end
     
     LoadBalancer -.->|Distribute Requests| Worker1
     LoadBalancer -.->|Distribute Requests| Worker2
-    LoadBalancer -.->|Distribute Requests| WorkerN
+    LoadBalancer -.->|Distribute Requests| Worker3
+    LoadBalancer -.->|Distribute Requests| Worker4
     
     subgraph "Rate Limiting"
         GlobalLimit[Global Rate Limit]
@@ -190,5 +213,32 @@ flowchart TD
         RateLimiterMiddleware -->|Check| UserLimit
         GlobalLimit -->|Update| Redis
         UserLimit -->|Update| Redis
+    end
+    
+    subgraph "API Token Flow"
+        ApiTokenController -->|Generate Token| ApiTokenService
+        ApiTokenService -->|Create Token| ApiTokenModel
+        ApiTokenMiddleware -->|Validate Token| ApiTokenService
+        ApiTokenService -->|Check Token| ApiTokenModel
+    end
+    
+    subgraph "HTTPS and Security"
+        CertBot[Certbot]
+        SSLCertificates[SSL Certificates]
+        CertBot -->|Renew| SSLCertificates
+        LoadBalancer -->|Use| SSLCertificates
+    end
+    
+    subgraph "Nginx Configuration"
+        LeastConnAlgorithm[Least Connections Algorithm]
+        HTTPSRedirect[HTTP to HTTPS Redirect]
+        SSLConfig[SSL Configuration]
+        SecurityHeaders[Security Headers]
+        ProxyConfig[Proxy Configuration]
+        LoadBalancer -->|Use| LeastConnAlgorithm
+        LoadBalancer -->|Implement| HTTPSRedirect
+        LoadBalancer -->|Apply| SSLConfig
+        LoadBalancer -->|Set| SecurityHeaders
+        LoadBalancer -->|Configure| ProxyConfig
     end
 ```

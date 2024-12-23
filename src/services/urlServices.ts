@@ -5,7 +5,7 @@ import { CacheService } from "./cacheServices";
 const uid = new ShortUniqueId({ length: 8 });
 
 export class UrlService {
-  static async generateshort_url(original_url: string, ipAddress: string): Promise<Url> {
+  static async generateshort_url(original_url: string, ipAddress: string, userId?: string): Promise<Url> {
     // Check if the URL already exists in the Cache
     const cachedUrl = await CacheService.getCache(original_url);
     if (cachedUrl && typeof cachedUrl === 'object') {
@@ -51,6 +51,7 @@ export class UrlService {
       short_url,
       created_at: new Date(),
       ip_addresses: [ipAddress],
+      user_id: userId || undefined,
     };
     console.log(url);
 

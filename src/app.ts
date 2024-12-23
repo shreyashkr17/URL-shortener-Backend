@@ -9,6 +9,9 @@ import {
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { UuidService } from "./services/uuidServices";
+import { AuthController } from "./controllers/authController";
+import { AuthMiddleware } from "./middleware/authMiddleware";
+import { ApiTokenMiddleware } from "./middleware/apiTokenMiddleware";
 
 const app = express();
 
@@ -16,7 +19,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 const corsOptions = {
-  origin: ["https://www.shortlycut.xyz", "https://shortlycut.xyz"],
+  origin: ["https://www.shortlycut.xyz", "https://shortlycut.xyz", "http://localhost:5173", "*"],
   optionsSuccessStatus: 200,
   credentials: true, // Add this line to allow cookies to be sent with CORS requests
 };
@@ -71,6 +74,18 @@ const createShortUrlHandler = async (
   }
 };
 
+const createBatchShortURLsHandler = async (
+  req:Request, 
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    await UrlController.shortenBatchURLs(req, res);
+  } catch (error) {
+    next(error);
+  }
+}
+
 const redirectUrlHandler = async (
   req: Request,
   res: Response,
@@ -83,11 +98,129 @@ const redirectUrlHandler = async (
   }
 };
 
+const registerAuthHandler = async (
+  req:Request,
+  res:Response,
+  next:NextFunction
+) => {
+  try {
+    await AuthController.register(req,res);
+  } catch (error) {
+    next(error);
+  }
+}
+const loginAuthHandler = async (
+  req:Request,
+  res:Response,
+  next:NextFunction
+) => {
+  try {
+    await AuthController.login(req, res);
+  } catch (error) {
+    next(error);
+  }
+}
+
+const authMiddlewareHandler = async (
+  req:Request,
+  res:Response,
+  next:NextFunction
+) => {
+  try {
+    await AuthMiddleware.authenticate(req,res,next);
+  } catch (error) {
+    next(error);
+  }
+}
+
+const logoutAuthHandler = async (
+  req:Request,
+  res:Response,
+  next:NextFunction
+) => {
+  try {
+    await AuthController.logout(req,res);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getProfileAuthHandler = async (
+  req:Request,
+  res:Response,
+  next:NextFunction
+) => {
+  try {
+    await AuthController.getProfile(req,res);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getgenerateAPIHandler = async(
+  req:Request,
+  res:Response,
+  next:NextFunction
+) => {
+  try {
+    await AuthController.generateAPIToken(req,res);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const generateListAPIHandler = async (
+  req:Request,
+  res:Response,
+  next: NextFunction
+) => {
+  try {
+    await AuthController.listApiTokens(req,res);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteAPITokenHandler = async (
+  req:Request,
+  res:Response,
+  next: NextFunction
+) => {
+  try {
+    await AuthController.revokeApiToken(req,res);
+  } catch (error) {
+    next(error);
+  }
+}
+
+const apiMiddlewareHandler = async (
+  req:Request,
+  res:Response,
+  next: NextFunction
+) => {
+  try {
+    await ApiTokenMiddleware.authenticate(req,res,next);
+  } catch (error) {
+    next(error);
+  }
+}
+
 app.get("/", (req, res) => {
-  res.send("Hello World");
+  res.sendFile("index.html", { root: __dirname });
 });
 
-app.post("/shorten", rateLimiterMiddleware, createShortUrlHandler);
+app.post("/auth/register", registerAuthHandler);
+app.post("/auth/login", loginAuthHandler);
+app.post('/auth/logout', authMiddlewareHandler, logoutAuthHandler);
+app.get('/auth/profile', authMiddlewareHandler, getProfileAuthHandler);
+
+app.post('/auth/api_token', authMiddlewareHandler, getgenerateAPIHandler);
+app.get('/auth/list-tokens', authMiddlewareHandler, generateListAPIHandler);
+app.delete('/auth/api_token/:token', authMiddlewareHandler, deleteAPITokenHandler);
+
+app.post("/shorten", apiMiddlewareHandler, rateLimiterMiddleware, createShortUrlHandler);
+app.post("/shorten/batch", apiMiddlewareHandler, rateLimiterMiddleware, createBatchShortURLsHandler);
+app.post("/ext/shorten/batch",  rateLimiterMiddleware, createBatchShortURLsHandler);
 app.get("/:id", redirectUrlHandler);
 
 app.get("/metrics", async (req: Request, res: Response) => {
