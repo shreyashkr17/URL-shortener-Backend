@@ -62,6 +62,12 @@ export class UrlController {
         return res.status(400).json({ 
           error: "Invalid input format. Expect array with header and URL entries" 
         });
+      };
+
+      if (urlArray.length > 100) {
+        return res.status(400).json({
+          error: "Array too long. Please send in chunk sizes of 300 or fewer URLs.",
+        });
       }
 
       const header = urlArray[0];
