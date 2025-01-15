@@ -6,12 +6,16 @@ import { ApiTokenModel } from "../models/apiTokenModel";
 import pool from "../config/database";
 
 export class AuthController {
-  static async register(req: Request, res: Response) {
+  static async register(registrationData: {
+    username: string;
+    email: string;
+    password: string;
+  }) {
     try {
-      const { username, email, password } = req.body;
+      const { username, email, password } = registrationData;
 
       if (!username || !email || !password) {
-        return res.status(400).json({ error: "All fields are required" });
+        throw new Error("All fields are required");
       }
 
       const { user, token } = await AuthServices.register(
@@ -20,121 +24,113 @@ export class AuthController {
         password
       );
 
-      res.cookie("auth_token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      });
-
-      res.status(201).json({ user, token });
+      return { user, token };
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      throw error;
     }
   }
 
-  static async login(req: Request, res: Response) {
+  static async login(loginData: any) {
     try {
-      const { email, password } = req.body;
+      const { email, password } = loginData;
 
       if (!email || !password) {
-        return res
-          .status(400)
-          .json({ error: "Email and password are required" });
+        throw new Error("Email and password are required");
       }
 
       const { user, token } = await AuthServices.login(email, password);
 
-      // Set JWT token in cookie
-      res.cookie("auth_token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      });
-
-      res.json({ user, token });
+      return { user, token };
     } catch (error: any) {
-      res.status(401).json({ error: error.message });
+      throw error;
     }
   }
 
-  static async logout(req: Request, res: Response) {
+  static async logout(userId: string) {
     try {
-      const userId = req.user?.id; // Will be set by auth middleware
-      if (userId) {
-        await AuthServices.logout(userId);
+      if (!userId) {
+        throw new Error("User ID required for logout");
       }
 
-      res.clearCookie("auth_token");
-      res.json({ message: "Logged out successfully" });
+      await AuthServices.logout(userId);
+      return { success: true };
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      throw error;
     }
   }
 
-  static async getProfile(req: Request, res: Response) {
+  static async getProfile(userId: string) {
     try {
-      const userId = req.user?.id;
       if (!userId) {
-        return res.status(401).json({ error: "Not authenticated" });
+        throw new Error("User ID required");
       }
 
       const urls = await UserModel.getUrlsByUserId(userId);
-      res.json({ urls });
+      return { urls };
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      throw error;
     }
   }
 
   // API Token
-  static async generateAPIToken(req: Request, res: Response) {
+  static async generateAPIToken(userId: string) {
     try {
-      const userId = req.user?.id;
+      // const userId = req.user?.id;
       if (!userId) {
-        return res.status(401).json({ error: "Not authenticated" });
+        throw new Error("User ID required");
       }
 
       const apiToken = await ApiTokenModel.create(userId);
-      res.json({ tokens:apiToken });
+      return apiToken;
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      throw error;
     }
   }
 
-  static async listApiTokens(req: Request, res: Response) {
+  static async listApiTokens(userId: string) {
     try {
-      const userId = req.user?.id;
       if (!userId) {
-        return res.status(401).json({ error: "Not authenticated" });
+        throw new Error("User ID required");
       }
+
       const tokens = await ApiTokenModel.findByUserId(userId);
-      res.json({ tokens });
+      return tokens;
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      throw error;
     }
   }
 
-  static async revokeApiToken(req: Request, res: Response) {
+  static async revokeApiToken(userId: string, tokenId: string) {
     try {
-      const userId = req.user?.id;
-      const tokenId = req.params.token; // Ensure you get the token from params
       if (!userId) {
-        return res.status(401).json({ error: "Not authenticated" });
+        throw new Error("User ID required");
       }
 
-      // Check if token exists
+      if (!tokenId) {
+        throw new Error("Token ID required");
+      }
+
       const tokenExists = await pool.query(
         "SELECT * FROM api_tokens WHERE id = $1",
         [tokenId]
       );
+
       if (tokenExists.rows.length === 0) {
-        return res.status(404).json({ error: "Token not found" });
+        const error = new Error("Token not found");
+        throw { ...error, status: 404 };
+      }
+
+      const token = tokenExists.rows[0];
+      if (token.user_id !== userId) {
+        const error = new Error("Unauthorized to revoke this token");
+        throw { ...error, status: 403 };
       }
 
       await ApiTokenModel.deleteToken(tokenId);
-      res.json({ message: "Token revoked successfully" });
+      return { message: "Token revoked successfully" };
     } catch (error: any) {
-      console.error("Error revoking API token:", error); // Added logging
-      res.status(500).json({ error: error.message });
+      console.error("Error revoking API token:", error);
+      throw error;
     }
   }
 }
